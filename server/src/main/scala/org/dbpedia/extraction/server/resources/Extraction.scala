@@ -194,20 +194,36 @@ class Extraction(@PathParam("lang") langCode : String)
 
     /**
      * Extracts a MediaWiki article
+     * @Consumes(Array("application/xml"))
+     * @Produces(Array("application/n-triples"))
      */
     @POST
     @Path("extract")
     @Consumes(Array("application/xml"))
-    @Produces(Array("application/xml"))
-    def extract(xml : Elem) =
+    def extract(xml : Elem, @QueryParam("format") format: String, @Context headers : HttpHeaders) : Response =
     {
-        val writer = new StringWriter
-        val formatter = TriX.writeHeader(writer, 2)
-        val source = XMLSource.fromXML(xml, language)
-        val destination = new WriterDestination(() => writer, formatter)
-        
-        Server.instance.extractor.extract(source, destination, language)
-        
-        writer.toString
+      val writer = new StringWriter
+
+      val contentType = selectContentType(format)
+
+      val formatter = format match
+      {
+        case "turtle-triples" => new TerseFormatter(false, true)
+        case "turtle-quads" => new TerseFormatter(true, true)
+        case "n-triples" => new TerseFormatter(false, false)
+        case "n-quads" => new TerseFormatter(true, false)
+        case "rdf-json" => new RDFJSONFormatter()
+        case _ => TriX.writeHeader(writer, 2)
+      }
+
+      val source = XMLSource.fromXML(xml, language)
+
+      val destination = new WriterDestination(() => writer, formatter)
+
+      Server.instance.extractor.extract(source, destination, language)
+
+      Response.ok(writer.toString)
+        .header(HttpHeaders.CONTENT_TYPE, contentType +"; charset=UTF-8" )
+        .build()
     }
 }
