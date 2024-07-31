@@ -220,7 +220,7 @@ class Extraction(@PathParam("lang") langCode : String)
 
       val destination = new WriterDestination(() => writer, formatter)
 
-      Server.instance.extractor.extract(source, destination, language)
+      Server.instance.extractor.extract(source, destination, language, true)
 
       Response.ok(writer.toString)
         .header(HttpHeaders.CONTENT_TYPE, contentType +"; charset=UTF-8" )
